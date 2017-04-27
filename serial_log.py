@@ -54,12 +54,16 @@ if config.has_option('config', 'senderid'):
 else:
    senderid = 'dev1'
 
-upkey = 'textkey'  # key you can match on local and remote for a minimal amount of protection.
+if config.has_option('config', 'upkey'):
+   upkey = config.get('config', 'upkey')
+else:
+   upkey = 'key1'
+
 floc = os.getenv("HOME")+'/'  # log file location
 fmode = 'a'  # log file mode = append
 
 # send startup message
-payload = {'data': str(datetime.datetime.now())+' Start up Ver: 1', 'type': 'ST', 'upkey': upkey, 'senderid': senderid}
+payload = {'data': str(datetime.datetime.now())+' Start up Ver: 2', 'type': 'ST', 'upkey': upkey, 'senderid': senderid}
 try:
    r = requests.post(url, data=payload) # auth=('userid', 'password'), if you need it
    print ('Startup message: '+r.text)
@@ -69,7 +73,7 @@ except requests.exceptions.RequestException as e:
       outf.write(str(datetime.datetime.now())+" - Startup error: "+str(e)+"\n")
       outf.flush()
 
-with serial.Serial(serialp,baud) as pt, open(floc+str(datetime.datetime.now())+'-serial.log',fmode) as logf:
+with serial.Serial(serialp,baud) as pt, open(floc+str(datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))+'-serial.log',fmode) as logf:
    spb = io.TextIOWrapper(io.BufferedRWPair(pt,pt,1), encoding='ascii', errors='ignore', newline='\r',line_buffering=True)
    spb.readline()  # throw away first line; likely to start mid-sentence (incomplete)
    D7 = None
