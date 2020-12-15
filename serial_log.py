@@ -45,10 +45,11 @@ except:
 if config.has_option('config', 'serialp'):
 	serialp = config.get('config', 'serialp')
 else:
-	#serialp  = '/dev/ttyUSB0'  # serial port to read data from
-	serialp  = '/dev/ttyS0'     # Ubuntu on P4 and Atom ITX 2016
-	#serialp  = '/dev/ttyS2'     # Pine A64
-	#serialp  = '/dev/ttyAMA0'   # Raspberry Pi, need to disable serial login first -> sudo raspi-config
+   #serialp  = '/dev/ttyUSB0'   # USB serial port
+   serialp  = '/dev/ttyS0'     # Ubuntu on box with built-in serial port
+   #serialp  = '/dev/ttyS2'     # Pine A64
+   #serialp  = '/dev/ttyAMA0'   # Raspberry Pi, need to setup serial port first, see cheatsheet
+
 baud  = 9600             # baud rate for serial port
 
 if config.has_option('config', 'url'):

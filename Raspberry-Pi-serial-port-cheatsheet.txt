@@ -1,0 +1,44 @@
+Raspberry Pi Serial Port Cheatsheet
+https://howtoraspberrypi.com/enable-port-serial-raspberry-pi/ - Starting point for this info
+
+sudo raspi-config
+Once raspi-config started, choose Interfacing options, then Serial.
+Answer No to the part asking if you want to activate a shell via the serial connection,
+then Yes to the part asking if you want to activate the hardware port.
+Validate, do Finish, then say yes to the question asking if you want to reboot the Raspberry Pi.
+If you want to use SSH or VNC, you can enable them also.
+
+models 3 and later, use uart for serial not bluetooth
+echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
+sudo systemctl disable hciuart
+sudo reboot
+
+Test loop back with minicom. Connect a 1K resistor from TXD / RXD, can use a wire, but can cause damage if wrong pins connected.
+sudo apt update -y
+sudo apt install minicom -y
+
+sudo minicom -D /dev/serial0 -b 9600
+A Minicom terminal starts up, if you type a letter, it should appear on the screen!
+Baud rate set to 9600 so the terminal can be used like the Serial Monitor function in the Arduino IDE.
+Some Arduino models do not use the serial port at D0, D1 to connect to the IDE,
+so a hardware monitor like this is needed to monitor the data at D0, D1.
+
+
+To make minicom easy to run, create a file on the desktop:
+cd Desktop/
+
+Use nano editor:
+nano minicom9600.sh
+#!/bin/bash
+sudo minicom -w -D /dev/serial0 -b 9600
+Ctrl O Ctrl X
+-or-
+echo '#!/bin/bash' > minicom9600.sh
+echo 'sudo minicom -w -D /dev/serial0 -b 9600' >> minicom9600.sh
+
+chmod +x minicom9600.sh
+
+Now there will be a file on the desktop to click and run in the terminal
+
+
+Tested with Raspberry Pi OS with desktop and recommended software December 2nd 2020
