@@ -8,4 +8,4 @@ Install git if that is needed on your distro.
 
 `git clone https://github.com/conciseusa/raspberry-pi-json-data-logger.git`
 
-In theory, all you need is Python, a serial port to receive the data, and a network port to push the data to the target server.
+In theory, all you need is Python, a serial port to receive the data, and a network port to push the data to the target server. Often the biggest challenge is getting connected to the serial port.
