@@ -41,29 +41,22 @@ except ImportError:
 
 config = ConfigParser()
 try:  # first look in shared config dir, then look in same dir as this file
-    config.readd('../config/serial_log.ini')
-except AttributeError:
-    print('AttributeError - serial_log.ini not found in shared config dir')
-except ConfigParser.DuplicateOptionError as e:
-    print('DuplicateOptionError: ', str(e))
+    config.read('../config/serial_log.ini')
 except Exception as e:  # catch *all* exceptions in Py3
     print('Unkown exception: ', str(e))
+    sys.exit('Abort - Errors in serial_log.ini')
 
-try:
-    config.read('serial_log.ini')
-except AttributeError:
-    print('AttributeError - serial_log.ini not found in current dir')
-except ConfigParser.DuplicateOptionError as e:
-    print('DuplicateOptionError: ', str(e))
-except Exception as e:  # catch *all* exceptions in Py3
-    print('Unkown exception: ', str(e))
+if 'config' not in config.sections():
+    print('serial_log.ini not found in shared config dir')
+    try:
+        config.read('serial_log.ini')
+    except Exception as e:  # catch *all* exceptions in Py3
+        print('Unkown exception: ', str(e))
+        sys.exit('Abort - Errors in serial_log.ini')
 
-try:
-    config.read('serial_log.ini')
-except ConfigParser.DuplicateOptionError:
-    print('DuplicateOptionError')
-
-sys.exit(' abort ')
+if 'config' not in config.sections():
+    print('serial_log.ini not found in current dir')
+    sys.exit('Abort - Can not locate serial_log.ini')
 
 if config.has_option('config', 'debugMsg'):
     debugMsg = config.get('config', 'debugMsg')
