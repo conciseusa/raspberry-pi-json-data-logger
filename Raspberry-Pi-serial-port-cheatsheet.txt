@@ -42,3 +42,10 @@ Now there will be a file on the desktop to click and run in the terminal
 
 
 Tested with Raspberry Pi OS with desktop and recommended software December 2nd 2020
+
+If you don't like minicom, you can try screen
+!! when running screen and this script, it will grab most of the data before the  script py !!
+sudo apt-get install screen
+screen /dev/ttyS0 9600
+exit Ctrl-a k (release Ctrl-a before pressing k)
+http://www.catonmat.net/blog/screen-terminal-emulator-cheat-sheet/
