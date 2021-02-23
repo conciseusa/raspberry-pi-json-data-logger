@@ -91,9 +91,9 @@ else:
     upkey = 'key1'
 
 if config.has_option('config', 'heartbeat_interval'):
-    heartbeat_interval = config.get('config', 'heartbeat_interval')
+    hbInterval = config.get('config', 'heartbeat_interval')
 else:
-    heartbeat_interval = 'H'
+    hbInterval = '10M'
 
 if config.has_option('config', 'signal_labels'):
     signal_labels = dict(item.split(":") for item in
@@ -105,7 +105,7 @@ else:
 floc = os.getenv("HOME")+'/'  # log file location
 fmode = 'a'  # log file mode = append
 
-if url:  # send startup message
+if url and stationId != '{SerialNumber}':  # send startup message if sId known
     payload = {'data': '{"Startup":' +
                '{"Time":"'+str(datetime.datetime.now())+'", "Version":"4"}}',
                'type': 'ST', 'upkey': upkey, 'stationId': stationId}
@@ -145,7 +145,7 @@ with serial.Serial(serialp, baud) as pt:
             low_values[i][i] = 100000  # higher then 16 bit a/d
 
     if debugMsg:
-        print('signal_labels.', signal_labels)
+        print('signal_labels: ', signal_labels)
     remote_watch = {}
     log_time = datetime.datetime.now()
 
@@ -185,8 +185,8 @@ with serial.Serial(serialp, baud) as pt:
         curr_date += '-'+str(dtime.tm_mday)
         curr_hour = str(dtime.tm_hour)
         curr_minute = str(dtime.tm_min)
+        print('Serial Data Time: ', parsed_json['Time'], end='\n')
         if debugMsg:  # echo line of text on-screen
-            print('Serial Data Time: ', parsed_json['Time'], end='\n')
             print(parsed_json)
         # should always have at least one channel of a/d
         if 'A0' not in parsed_json:
@@ -209,11 +209,10 @@ with serial.Serial(serialp, baud) as pt:
             else:
                 print(label + str(i)+' Hi/Low: Value missing.')
 
-        print('remote_watch')
-        for key in sorted(remote_watch):
-            print(key, remote_watch[key])
-        print(dtime)
-        print('', flush=True)  # blank line to make easier to read
+        if len(remote_watch):
+            print('remote_watch')
+            for key in sorted(remote_watch):
+                print(key, remote_watch[key])
 
         if log_time is not None:
             serialLog = floc+str(log_time.strftime('%Y-%m-%d'))+'-serial.log'
@@ -221,7 +220,7 @@ with serial.Serial(serialp, baud) as pt:
                 logf.write(serial_line)  # write incomming data to file
                 logf.flush()  # make sure it actually gets written out
 
-        # needs to be generalized to actice watch signals set in ini
+        # needs to be generalized to active watch signals set in ini
         if not parsed_json['D7'] and url:  # send well run messages
             payload = {'data': serial_line, 'type': 'WR', 'upkey': upkey,
                        'stationId': stationId}
@@ -299,12 +298,13 @@ with serial.Serial(serialp, baud) as pt:
 
         # send heartbeat message
         if debugMsg:
-            print('Check if heartbeat time: ', heartbeat_interval, end='\n')
+            print('Check heartbeat time: ', hbInterval, '/', hbTime, end='\n')
         # or (parsed_json['D6'] == 0): add to trigger when testing
-        if ((heartbeat_interval == 'H' and curr_hour != hbTime)
-            or (heartbeat_interval == '10M' and curr_minute % 9 != hbTime)
-                or (heartbeat_interval == 'M' and curr_minute != hbTime)):
-            if (hbTime is not None):
+        if (hbTime is not None):
+            if ((hbInterval == 'H' and curr_hour != hbTime) or
+                (hbInterval == '10M' and int(int(curr_minute) / 10) != hbTime)
+                    or (hbInterval == 'M' and curr_minute != hbTime)):
+
                 payload = parsed_json
                 #! add logic to get ser num
                 payload['stationId'] = stationId
@@ -321,9 +321,18 @@ with serial.Serial(serialp, baud) as pt:
                             errorf.write(datetimeStr +
                                          " - Heartbeat send error: "+msgEnd)
                             errorf.flush()
-            if (heartbeat_interval == 'H'):
+                if (hbInterval == 'H'):
+                    hbTime = curr_hour
+                if (hbInterval == '10M'):
+                    hbTime = int(int(curr_minute) / 10)
+                if (hbInterval == 'M'):
+                    hbTime = curr_minute
+        else:  # seed hbTime
+            if (hbInterval == 'H'):
                 hbTime = curr_hour
-            if (heartbeat_interval == '10M'):
-                hbTime = curr_minute % 9
-            if (heartbeat_interval == 'M'):
+            if (hbInterval == '10M'):
+                hbTime = int(int(curr_minute) / 10)
+            if (hbInterval == 'M'):
                 hbTime = curr_minute
+
+        print('', flush=True)  # blank line to make easier to read
