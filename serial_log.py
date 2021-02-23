@@ -95,6 +95,13 @@ if config.has_option('config', 'heartbeat_interval'):
 else:
     heartbeat_interval = 'H'
 
+if config.has_option('config', 'signal_labels'):
+    signal_labels = dict(item.split(":") for item in
+                         config.get('config', 'signal_labels').split('\n'))
+else:
+    signal_labels = {}
+
+
 floc = os.getenv("HOME")+'/'  # log file location
 fmode = 'a'  # log file mode = append
 
@@ -136,8 +143,7 @@ with serial.Serial(serialp, baud) as pt:
             high_values[i][i] = 0
             low_values[i] = {}
             low_values[i][i] = 100000  # higher then 16 bit a/d
-    signal_labels = dict(item.split(":") for item in
-                         config.get('config', 'signal_labels').split('\n'))
+
     if debugMsg:
         print('signal_labels.', signal_labels)
     remote_watch = {}
