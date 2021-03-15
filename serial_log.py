@@ -50,7 +50,7 @@ if 'config' not in config.sections():
     print('serial_log.ini not found in shared config dir')
     try:
         config.read('serial_log.ini')
-    except Exception as e:  # catch *all* exceptions in Py3
+    except Exception as e:
         print('Unkown exception: ', str(e))
         sys.exit('Abort - Errors in serial_log.ini')
 
@@ -80,15 +80,27 @@ if config.has_option('config', 'url'):  # to send to remote server
 else:  # turn off send to remote server
     url = ''
 
-if config.has_option('config', 'stationId'):
-    stationId = config.get('config', 'stationId')
-else:
-    stationId = '{SerialNumber}'  # get SerialNumber from incomming data
+if config.has_option('config', 'url2'):  # to send to remote server 2
+    url2 = config.get('config', 'url2')
+else:  # turn off send to remote server 2
+    url2 = ''
 
 if config.has_option('config', 'upkey'):
     upkey = config.get('config', 'upkey')
 else:
     upkey = 'key1'
+
+if config.has_option('config', 'upkey2'):
+    upkey2 = config.get('config', 'upkey2')
+else:
+    upkey2 = 'key1'
+
+if config.has_option('config', 'stationId'):
+    stationId = config.get('config', 'stationId')
+    if not stationId.isalnum():
+        sys.exit('Abort - serial_log.ini/stationId use only letters & numbers')
+else:
+    stationId = '{SerialNumber}'  # get SerialNumber from incomming data
 
 if config.has_option('config', 'heartbeat_interval'):
     hbInterval = config.get('config', 'heartbeat_interval')
@@ -105,20 +117,42 @@ else:
 floc = os.getenv("HOME")+'/'  # log file location
 fmode = 'a'  # log file mode = append
 
-if url and stationId != '{SerialNumber}':  # send startup message if sId known
-    payload = {'data': '{"Startup":' +
-               '{"Time":"'+str(datetime.datetime.now())+'", "Version":"4"}}',
-               'type': 'ST', 'upkey': upkey, 'stationId': stationId}
-    try:
-        r = requests.post(url, data=payload)
-        # auth=('userid', 'password'), if you need it
-        print('Startup message: '+r.text)
-    except requests.exceptions.RequestException as e:
-        print("Startup error: "+str(e)+"\n")
-        with open(floc+'error.log', fmode) as errorf:
-            errorf.write(str(datetime.datetime.now())+" - Startup error: " +
-                         str(e)+"\n")
-            errorf.flush()
+if stationId != '{SerialNumber}':  # send startup message if sId known
+    if url:
+        payload = {'data': '{"Startup":' +
+                   '{"Time":"'+str(datetime.datetime.now()) +
+                   '", "Version":"4"}}',
+                   'type': 'ST', 'stationId': stationId}
+        if upkey:
+            payload['upkey'] = upkey
+        try:
+            r = requests.post(url, data=payload)
+            # auth=('userid', 'password'), if you need it
+            print('Startup message url: '+r.text)
+        except requests.exceptions.RequestException as e:
+            print("Startup error url: "+str(e)+"\n")
+            with open(floc+'error.log', fmode) as errorf:
+                errorf.write(str(datetime.datetime.now()) +
+                             " - Startup error url: " +
+                             str(e)+"\n")
+                errorf.flush()
+    if url2:
+        payload = {'data': '{"Startup":' +
+                   '{"Time":"'+str(datetime.datetime.now()) +
+                   '", "Version":"4"}}',
+                   'type': 'ST', 'stationId': stationId}
+        if upkey2:
+            payload['upkey'] = upkey2
+        try:
+            r = requests.post(url2, data=payload)
+            print('Startup message url2: '+r.text)
+        except requests.exceptions.RequestException as e:
+            print("Startup error url2: "+str(e)+"\n")
+            with open(floc+'error.log', fmode) as errorf:
+                errorf.write(str(datetime.datetime.now()) +
+                             " - Startup error url2: " +
+                             str(e)+"\n")
+                errorf.flush()
 
 with serial.Serial(serialp, baud) as pt:
     spb = io.TextIOWrapper(io.BufferedRWPair(pt, pt, 1), encoding='ascii',
@@ -128,7 +162,7 @@ with serial.Serial(serialp, baud) as pt:
     spb._CHUNK_SIZE = 1
     # throw away first line; likely to start mid-sentence (incomplete)
     spb.readline()
-    D7 = None
+    D7 = None #!
     check_date = None
     hbTime = None
 
@@ -220,8 +254,8 @@ with serial.Serial(serialp, baud) as pt:
                 logf.write(serial_line)  # write incomming data to file
                 logf.flush()  # make sure it actually gets written out
 
-        # needs to be generalized to active watch signals set in ini
-        if not parsed_json['D7'] and url:  # send well run messages
+        # needs to be generalized to active_watch signals set in ini
+        if not parsed_json['D7'] and url: #! send well run messages
             payload = {'data': serial_line, 'type': 'WR', 'upkey': upkey,
                        'stationId': stationId}
             try:
@@ -235,8 +269,8 @@ with serial.Serial(serialp, baud) as pt:
                     errorf.write(str(datetime.datetime.now())+" - "+msgEnd)
                     errorf.flush()
 
-        if parsed_json['D7'] != D7:  # if signal changed
-            if D7 is not None:
+        if parsed_json['D7'] != D7:  #! if signal changed
+            if D7 is not None: #! search d7
                 remote_watch[str(parsed_json['Time'])] = parsed_json['D7']
                 with open(floc+curr_date+'-serial-summary.log', fmode) as outf:
                     outf.write('D7 -> WR:'+str(parsed_json['D7']))
@@ -245,8 +279,7 @@ with serial.Serial(serialp, baud) as pt:
                     outf.flush()
             D7 = parsed_json['D7']
 
-        # second clause is to trigger when testing
-        if (curr_date != check_date) or (parsed_json['D6'] == 0):
+        if (curr_date != check_date):  # or (parsed_json['D4']==0) for testing
             if (check_date is not None):
 
                 # check if disk if filling up
@@ -299,7 +332,21 @@ with serial.Serial(serialp, baud) as pt:
         # send heartbeat message
         if debugMsg:
             print('Check heartbeat time: ', hbInterval, '/', hbTime, end='\n')
-        # or (parsed_json['D6'] == 0): add to trigger when testing
+        message = ''
+        messagefile = None
+        try:
+            messagefile = open('../config/message.txt', 'r', encoding='utf-8')
+        except OSError:
+            print("No message.txt file")
+        # no code here, exceptions will not close the file
+        if messagefile:
+            with messagefile:
+                # only for sending short messages
+                message = messagefile.read(2100)
+                if len(message) > 2000:
+                    print("Oversized message.txt file. 2000 max. Size: ",
+                          len(message))
+        # or (parsed_json['D8'] == 0 to trigger faster then 1 min when testing
         if (hbTime is not None):
             if ((hbInterval == 'H' and curr_hour != hbTime) or
                 (hbInterval == '10M' and int(int(curr_minute) / 10) != hbTime)
@@ -308,10 +355,29 @@ with serial.Serial(serialp, baud) as pt:
                 payload = parsed_json
                 #! add logic to get ser num
                 payload['stationId'] = stationId
+
+                if message:
+                    payload['message'] = message
+                datetimeStr = str(datetime.datetime.now())
                 if url:
-                    datetimeStr = str(datetime.datetime.now())
+                    if upkey:
+                        payload['upkey'] = upkey
                     try:
                         r = requests.post(url, data=payload)
+                        # auth=('userid', 'password'), if you need it
+                        print(datetimeStr + ' - Heartbeat message: '+r.text)
+                    except requests.exceptions.RequestException as e:
+                        msgEnd = str(e)+"\n"
+                        print("Heartbeat message send error: "+msgEnd)
+                        with open(floc+'error.log', fmode) as errorf:
+                            errorf.write(datetimeStr +
+                                         " - Heartbeat send error: "+msgEnd)
+                            errorf.flush()
+                if url2:
+                    if upkey2:
+                        payload['upkey'] = upkey2
+                    try:
+                        r = requests.post(url2, data=payload)
                         # auth=('userid', 'password'), if you need it
                         print(datetimeStr + ' - Heartbeat message: '+r.text)
                     except requests.exceptions.RequestException as e:
@@ -335,4 +401,7 @@ with serial.Serial(serialp, baud) as pt:
             if (hbInterval == 'M'):
                 hbTime = curr_minute
 
+        # shows how to delete files
+        # look into auto delete of old log files so disk does not fill up
+        # https://www.tutorialspoint.com/python3/python_files_io.htm
         print('', flush=True)  # blank line to make easier to read
