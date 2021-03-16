@@ -50,7 +50,7 @@ if 'config' not in config.sections():
     print('serial_log.ini not found in shared config dir')
     try:
         config.read('serial_log.ini')
-    except Exception as e:
+    except Exception as e:  # catch *all* exceptions in Py3
         print('Unkown exception: ', str(e))
         sys.exit('Abort - Errors in serial_log.ini')
 
@@ -160,9 +160,12 @@ with serial.Serial(serialp, baud) as pt:
     # disabled buffering on Armbian Pine A64
     # https://stackoverflow.com/questions/10222788/line-buffered-serial-input
     spb._CHUNK_SIZE = 1
-    # throw away first line; likely to start mid-sentence (incomplete)
     spb.readline()
-    D7 = None #!
+    serial_line = spb.readline()  # read one line of text from serial port
+    if debugMsg:
+        print('1st line serial data: ', serial_line)
+    # throw away first line; might start mid-sentence (incomplete)
+    D7 = None#!
     check_date = None
     hbTime = None
 
@@ -208,20 +211,23 @@ with serial.Serial(serialp, baud) as pt:
         if localLog == 'Y':
             if log_time.strftime('%y') != nowTime.strftime('%y'):
                 log_time = datetime.datetime.now()
+        if debugMsg:
+            print('Log rotate - nowTime: ', str(nowTime), ', log_time: ', str(log_time))
 
+        if debugMsg:  # echo line of text on-screen
+            print(parsed_json)
         #! If time missing, just use time in this script?
         if 'Time' not in parsed_json:  # we should always have Timestamp
             print('Data packet missing Time', flush=True)
             continue  # if not a data logger packet, skip the rest
+        print('Serial Data Time: ', parsed_json['Time'], end='\n')
         dtime = time.strptime(parsed_json['Time'], "%Y-%m-%dT%H:%M:%S")
         curr_date = str(dtime.tm_year)
         curr_date += '-'+str(dtime.tm_mon)
         curr_date += '-'+str(dtime.tm_mday)
         curr_hour = str(dtime.tm_hour)
         curr_minute = str(dtime.tm_min)
-        print('Serial Data Time: ', parsed_json['Time'], end='\n')
-        if debugMsg:  # echo line of text on-screen
-            print(parsed_json)
+
         # should always have at least one channel of a/d
         if 'A0' not in parsed_json:
             print('Data packet missing A0', flush=True)
