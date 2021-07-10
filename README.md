@@ -14,6 +14,8 @@ Add to crontab so at restart: wait for network to come up and auto restart seria
 
 @reboot until ping -c 1 -W 1 8.8.8.8; do sleep 1; done; cd /home/pi/git/raspberry-pi-json-data-logger; while true; do python3 serial_log.py; echo "restarting serial_log"; test $? -gt 128 && break; done;
 
+Before adding the auto start code to crontab, it can be useful to run `python3 serial_log.py` in the terminal where you can see error messages. Once everything is working end-to-end, then add the auto start code to crontab.
+
 To show current crontab: `crontab -l`  to edit crontab: `crontab -e`
 
 In theory, all you need is Python, a serial port to receive the data, and a network port to push the data to the target server. Often the biggest challenge is getting connected to the serial port.
