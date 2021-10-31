@@ -23,6 +23,8 @@ from __future__ import print_function
 import serial
 import io
 import sys
+if sys.version_info.major != 3:
+    sys.exit('Python3 required -> python3 serial_log.py')
 import json
 import os
 import subprocess
@@ -80,20 +82,20 @@ if config.has_option('config', 'url'):  # to send to remote server
 else:  # turn off send to remote server
     url = ''
 
+if config.has_option('config', 'upkey'):
+    upkey = config.get('config', 'upkey')
+else:
+    upkey = ''
+
 if config.has_option('config', 'url2'):  # to send to remote server 2
     url2 = config.get('config', 'url2')
 else:  # turn off send to remote server 2
     url2 = ''
 
-if config.has_option('config', 'upkey'):
-    upkey = config.get('config', 'upkey')
-else:
-    upkey = 'key1'
-
 if config.has_option('config', 'upkey2'):
     upkey2 = config.get('config', 'upkey2')
 else:
-    upkey2 = 'key1'
+    upkey2 = ''
 
 if config.has_option('config', 'stationId'):
     stationId = config.get('config', 'stationId')
@@ -102,10 +104,22 @@ if config.has_option('config', 'stationId'):
 else:
     stationId = '{SerialNumber}'  # get SerialNumber from incomming data
 
-if config.has_option('config', 'heartbeat_interval'):
-    hbInterval = config.get('config', 'heartbeat_interval')
+if config.has_option('config', 'hbInterval'):
+    hbInterval = config.get('config', 'hbInterval')
 else:
     hbInterval = '10M'
+
+if config.has_option('config', 'rmTrigger'):
+    # the D or A input that triggers rapid messages (send data on every incomming message)
+    rmTrigger = config.get('config', 'rmTrigger')
+else:
+    rmTrigger = ''
+
+if config.has_option('config', 'rmState'):
+    # comparing to a D or A input to trigger rapid message, so convert to int
+    rmState = int(config.get('config', 'rmState'))
+else:
+    rmState = 0  # default to active low
 
 if config.has_option('config', 'signal_labels'):
     signal_labels = dict(item.split(":") for item in
@@ -117,32 +131,31 @@ else:
 floc = os.getenv("HOME")+'/'  # log file location
 fmode = 'a'  # log file mode = append
 
-if stationId != '{SerialNumber}':  # send startup message if sId known
+if stationId != '{SerialNumber}':  # send startup message if sId known, if not known, need to wait for data
+    #payload = {'data': '{"Startup":' + '{"Time":"'+str(datetime.datetime.now()) + '", "Version":"4"}}', }
+    payload = {'type': 'ST'}
+    payload['message'] = 'Startup - Time' + str(datetime.datetime.now()) + 'Version: 4'
+    #! add logic to get ser num, -> do not have a meesage at this point to get ser num
+    payload['stationId'] = stationId
     if url:
-        payload = {'data': '{"Startup":' +
-                   '{"Time":"'+str(datetime.datetime.now()) +
-                   '", "Version":"4"}}',
-                   'type': 'ST', 'stationId': stationId}
         if upkey:
             payload['upkey'] = upkey
         try:
             r = requests.post(url, data=payload)
             # auth=('userid', 'password'), if you need it
-            print('Startup message url: '+r.text)
+            print('Startup message: '+r.text)
         except requests.exceptions.RequestException as e:
-            print("Startup error url: "+str(e)+"\n")
+            print("Startup error: "+str(e)+"\n")
             with open(floc+'error.log', fmode) as errorf:
                 errorf.write(str(datetime.datetime.now()) +
-                             " - Startup error url: " +
+                             " - Startup error: " +
                              str(e)+"\n")
                 errorf.flush()
     if url2:
-        payload = {'data': '{"Startup":' +
-                   '{"Time":"'+str(datetime.datetime.now()) +
-                   '", "Version":"4"}}',
-                   'type': 'ST', 'stationId': stationId}
         if upkey2:
             payload['upkey'] = upkey2
+        else:
+            payload.pop('upkey') # incase was set above
         try:
             r = requests.post(url2, data=payload)
             print('Startup message url2: '+r.text)
@@ -160,12 +173,14 @@ with serial.Serial(serialp, baud) as pt:
     # disabled buffering on Armbian Pine A64
     # https://stackoverflow.com/questions/10222788/line-buffered-serial-input
     spb._CHUNK_SIZE = 1
-    spb.readline()
     serial_line = spb.readline()  # read one line of text from serial port
+    # throw away first line; might start mid-sentence (incomplete)
     if debugMsg:
         print('1st line serial data: ', serial_line)
-    # throw away first line; might start mid-sentence (incomplete)
-    D7 = None#!
+    else:
+        print('1st line serial data ignored.')
+    print('', flush=True)  # blank line to make easier to read
+    rmPrevData = None # rapid messages - load from rmTrigger, compare with current to sse change
     check_date = None
     hbTime = None
 
@@ -188,13 +203,14 @@ with serial.Serial(serialp, baud) as pt:
 
     while (1):
         serial_line = spb.readline()  # read one line of text from serial port
+        datetimeStr = str(datetime.datetime.now())
         try:
             parsed_json = json.loads(serial_line)
         except Exception as e:  # catch *all* exceptions in Py3
             print('Bad JSON. Skipping. ', str(e))
             print('', flush=True)  # blank line to make easier to read
             with open(floc+'error.log', fmode) as errorf:
-                errorf.write(str(datetime.datetime.now()) +
+                errorf.write(datetimeStr +
                              " - Bad JSON. Skipping. "+str(e)+"\n")
                 errorf.flush()
             continue
@@ -249,51 +265,72 @@ with serial.Serial(serialp, baud) as pt:
             else:
                 print(label + str(i)+' Hi/Low: Value missing.')
 
-        if len(remote_watch):
-            print('remote_watch')
-            for key in sorted(remote_watch):
-                print(key, remote_watch[key])
-
         if log_time is not None:
             serialLog = floc+str(log_time.strftime('%Y-%m-%d'))+'-serial.log'
             with open(serialLog, fmode) as logf:
                 logf.write(serial_line)  # write incomming data to file
                 logf.flush()  # make sure it actually gets written out
 
-        # needs to be generalized to active_watch signals set in ini
-        if not parsed_json['D7'] and url: #! send well run messages
-            payload = {'data': serial_line, 'type': 'WR', 'upkey': upkey,
-                       'stationId': stationId}
-            try:
-                r = requests.post(url, data=payload)
-                # auth=('userid', 'password'), if you need it
-                print('Well run message: '+r.text)
-            except requests.exceptions.RequestException as e:
-                msgEnd = "Well run send error: "+str(e)+"\n"
-                print(msgEnd)
-                with open(floc+'error.log', fmode) as errorf:
-                    errorf.write(str(datetime.datetime.now())+" - "+msgEnd)
-                    errorf.flush()
+        if rmTrigger and (url or url2): # send rapid messages if trigger active
+            rmTriggerInt = int(parsed_json[rmTrigger])
+            #print('rmState  ', type(rmState))
+            if (rmTriggerInt and rmState) or (not rmTriggerInt and not rmState):
+                payload = parsed_json
+                payload['type'] = 'RM'
+                #! add logic to get ser num
+                payload['stationId'] = stationId
+                
+                if url:
+                    if upkey:
+                        payload['upkey'] = upkey
+                    try:
+                        r = requests.post(url, data=payload)
+                        # auth=('userid', 'password'), if you need it
+                        print('Rapid message response: '+r.text)
+                    except requests.exceptions.RequestException as e:
+                        msgEnd = "Rapid message send error: "+str(e)+"\n"
+                        print(msgEnd)
+                        with open(floc+'error.log', fmode) as errorf:
+                            errorf.write(datetimeStr+" - "+msgEnd)
+                            errorf.flush()
+                        
+                if url2:
+                    if upkey2:
+                        payload['upkey'] = upkey2
+                    try:
+                        r = requests.post(url2, data=payload)
+                        # auth=('userid', 'password'), if you need it
+                        print(datetimeStr + ' - Heartbeat message: '+r.text)
+                    except requests.exceptions.RequestException as e:
+                        msgEnd = str(e)+"\n"
+                        print("HRapid message send error: "+msgEnd)
+                        with open(floc+'error.log', fmode) as errorf:
+                            errorf.write(datetimeStr +
+                                         " - Heartbeat send error: "+msgEnd)
+                            errorf.flush()
 
-        if parsed_json['D7'] != D7:  #! if signal changed
-            if D7 is not None: #! search d7
-                remote_watch[str(parsed_json['Time'])] = parsed_json['D7']
+        if parsed_json[rmTrigger] != rmPrevData:  # if signal changed
+            if rmPrevData is not None: # skip until rmPrevData set
+                remote_watch[str(parsed_json['Time'])] = parsed_json[rmTrigger]
                 with open(floc+curr_date+'-serial-summary.log', fmode) as outf:
-                    outf.write('D7 -> WR:'+str(parsed_json['D7']))
+                    outf.write('rmTrigger:'+str(parsed_json[rmTrigger]))
                     # out full JSON to get timestamp and all conditions
                     outf.write(serial_line)
                     outf.flush()
-            D7 = parsed_json['D7']
+            rmPrevData = parsed_json[rmTrigger]
+            if len(remote_watch):
+                print('remote_watch data:')
+                for key in sorted(remote_watch):
+                    print(key, rmTrigger, remote_watch[key])
 
-        if (curr_date != check_date):  # or (parsed_json['D4']==0) for testing
-            if (check_date is not None):
+        if (curr_date != check_date):  # or (parsed_json['D4']==0) # uncomment for testing
+            if (check_date is not None):  # if None, will be set below for next cycle
 
                 # check if disk if filling up
                 proc = subprocess.Popen(["df", "-h"], stdout=subprocess.PIPE)
                 output, error = proc.communicate()
                 dfMsg = str(output.strip().decode('ascii'))
                 summaryLog = floc+check_date+'-serial-summary.log'
-                datetimeStr = str(datetime.datetime.now())
 
                 with open(summaryLog, fmode) as outf:
                     # high/low track same signals, so loop on high to get both
@@ -308,8 +345,13 @@ with serial.Serial(serialp, baud) as pt:
                 # open summary to send, recommended files opened in binary mode
                 with open(summaryLog, 'rb') as datafile:
                     # http://stackoverflow.com/questions/16145116/python-requests-post-data-from-a-file
-                    payload = {'data': datafile.read(), 'type': 'SR',
-                               'upkey': upkey, 'stationId': stationId}
+                    payload = {'data': datafile.read()}
+                    #payload = datafile.read()
+                    payload['type'] = 'SR'
+                    #! add logic to get ser num
+                    payload['stationId'] = stationId
+                    if upkey:
+                        payload['upkey'] = upkey
                     # headers={'content-type':'application/x-www-form-urlencoded'}
                     # , headers=headers
                     if url:
@@ -321,8 +363,7 @@ with serial.Serial(serialp, baud) as pt:
                             msgEnd = "Summary upload error: "+str(e)+"\n"
                             print(msgEnd)
                             with open(floc+'error.log', fmode) as errorf:
-                                errorf.write(str(datetime.datetime.now()) +
-                                             " - "+msgEnd)
+                                errorf.write(datetimeStr + " - " + msgEnd)
                                 errorf.flush()
 
                 # reset trackers
@@ -359,12 +400,13 @@ with serial.Serial(serialp, baud) as pt:
                     or (hbInterval == 'M' and curr_minute != hbTime)):
 
                 payload = parsed_json
+                payload['type'] = 'HB'
                 #! add logic to get ser num
                 payload['stationId'] = stationId
 
                 if message:
                     payload['message'] = message
-                datetimeStr = str(datetime.datetime.now())
+
                 if url:
                     if upkey:
                         payload['upkey'] = upkey
