@@ -45,16 +45,19 @@ config = ConfigParser()
 try:  # first look in shared config dir, then look in same dir as this file
     config.read('../config/serial_log.ini')
 except Exception as e:  # catch *all* exceptions in Py3
-    print('Unkown exception: ', str(e))
+    print('Exception reading ../config/serial_log.ini: ', str(e))
     sys.exit('Abort - Errors in serial_log.ini')
 
 if 'config' not in config.sections():
-    print('serial_log.ini not found in shared config dir')
+    print('serial_log.ini not found in shared config dir: ../config/serial_log.ini')
     try:
         config.read('serial_log.ini')
     except Exception as e:  # catch *all* exceptions in Py3
-        print('Unkown exception: ', str(e))
+        print('Exception reading serial_log.ini: ', str(e))
         sys.exit('Abort - Errors in serial_log.ini')
+    else:
+        print('Warning - It is recommended to copy serial_log.ini to: ../config/serial_log.ini')
+        print('    to reduce conflicts pulling updates.'+"\n")
 
 if 'config' not in config.sections():
     print('serial_log.ini not found in current dir')
