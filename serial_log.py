@@ -130,14 +130,16 @@ if config.has_option('config', 'signal_labels'):
 else:
     signal_labels = {}
 
-
-floc = os.getenv("HOME")+'/'  # log file location
+# set log/data file location
+if os.path.exists(os.getenv("HOME")+'/log'):
+    floc = os.getenv("HOME")+'/log/'  
+else:
+    floc = os.getenv("HOME")+'/'
 fmode = 'a'  # log file mode = append
 
 if stationId != '{SerialNumber}':  # send startup message if sId known, if not known, need to wait for data
-    #payload = {'data': '{"Startup":' + '{"Time":"'+str(datetime.datetime.now()) + '", "Version":"4"}}', }
     payload = {'type': 'ST'}
-    payload['message'] = 'Startup - Time' + str(datetime.datetime.now()) + 'Version: 4'
+    payload['message'] = 'Startup - ' + str(datetime.datetime.now()) + ' Version: 4'
     #! add logic to get ser num, -> do not have a meesage at this point to get ser num
     payload['stationId'] = stationId
     if url:
@@ -269,10 +271,28 @@ with serial.Serial(serialp, baud) as pt:
                 print(label + str(i)+' Hi/Low: Value missing.')
 
         if log_time is not None:
-            serialLog = floc+str(log_time.strftime('%Y-%m-%d'))+'-serial.log'
-            with open(serialLog, fmode) as logf:
+            fileName = floc+str(log_time.strftime('%Y-%m-%d'))+'-serial.log'
+            with open(fileName, fmode) as logf:
                 logf.write(serial_line)  # write incomming data to file
                 logf.flush()  # make sure it actually gets written out
+
+            fileName = floc+str(log_time.strftime('%Y-%m-%d'))+'-data.csv'
+            if not os.path.exists(fileName):  # write labels to first line
+                with open(fileName, fmode) as logf:
+                    delimiter = ''
+                    for i in parsed_json.keys():
+                        logf.write(delimiter+'"'+str(i)+'"')
+                        delimiter = ','
+                    logf.write("\n")
+                    logf.flush()
+
+            with open(fileName, fmode) as logf:
+                delimiter = ''
+                for i in parsed_json:
+                    logf.write(delimiter+'"'+str(parsed_json[i])+'"')
+                    delimiter = ','
+                logf.write("\n")
+                logf.flush()
 
         if rmTrigger and (url or url2): # send rapid messages if trigger active
             rmTriggerInt = int(parsed_json[rmTrigger])
@@ -296,7 +316,7 @@ with serial.Serial(serialp, baud) as pt:
                         with open(floc+'error.log', fmode) as errorf:
                             errorf.write(datetimeStr+" - "+msgEnd)
                             errorf.flush()
-                        
+
                 if url2:
                     if upkey2:
                         payload['upkey'] = upkey2
@@ -305,11 +325,10 @@ with serial.Serial(serialp, baud) as pt:
                         # auth=('userid', 'password'), if you need it
                         print(datetimeStr + ' - Heartbeat message: '+r.text)
                     except requests.exceptions.RequestException as e:
-                        msgEnd = str(e)+"\n"
-                        print("HRapid message send error: "+msgEnd)
+                        msgEnd = "Rapid message send url2 error: "+str(e)+"\n"
+                        print(msgEnd)
                         with open(floc+'error.log', fmode) as errorf:
-                            errorf.write(datetimeStr +
-                                         " - Heartbeat send error: "+msgEnd)
+                            errorf.write(datetimeStr+" - "+msgEnd)
                             errorf.flush()
 
         if parsed_json[rmTrigger] != rmPrevData:  # if signal changed
@@ -350,6 +369,14 @@ with serial.Serial(serialp, baud) as pt:
                     # http://stackoverflow.com/questions/16145116/python-requests-post-data-from-a-file
                     payload = {'data': datafile.read()}
                     #payload = datafile.read()
+                    device = 'Unknown'  # try to send some device info for remote users
+                    if os.path.exists('/proc/device-tree/model'):
+                        with open('/proc/device-tree/model') as f:
+                            device = f.readlines()
+                    elif os.path.exists('/proc/cpuinfo'):
+                        with open('/proc/cpuinfo') as f:
+                            device = f.readlines()
+                    payload['device'] = device
                     payload['type'] = 'SR'
                     #! add logic to get ser num
                     payload['stationId'] = stationId
@@ -358,12 +385,28 @@ with serial.Serial(serialp, baud) as pt:
                     # headers={'content-type':'application/x-www-form-urlencoded'}
                     # , headers=headers
                     if url:
+                        if upkey:
+                            payload['upkey'] = upkey
                         try:
                             r = requests.post(url, data=payload)
                             # auth=('userid', 'password'), if you need it
                             print('Summary upload: '+r.text)
                         except requests.exceptions.RequestException as e:
                             msgEnd = "Summary upload error: "+str(e)+"\n"
+                            print(msgEnd)
+                            with open(floc+'error.log', fmode) as errorf:
+                                errorf.write(datetimeStr + " - " + msgEnd)
+                                errorf.flush()
+
+                    if url2:
+                        if upkey2:
+                            payload['upkey'] = upkey2
+                        try:
+                            r = requests.post(url2, data=payload)
+                            # auth=('userid', 'password'), if you need it
+                            print('Summary upload url2: '+r.text)
+                        except requests.exceptions.RequestException as e:
+                            msgEnd = "Summary upload url2 error: "+str(e)+"\n"
                             print(msgEnd)
                             with open(floc+'error.log', fmode) as errorf:
                                 errorf.write(datetimeStr + " - " + msgEnd)
