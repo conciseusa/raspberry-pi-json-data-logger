@@ -323,7 +323,7 @@ with serial.Serial(serialp, baud) as pt:
                     try:
                         r = requests.post(url2, data=payload)
                         # auth=('userid', 'password'), if you need it
-                        print(datetimeStr + ' - Heartbeat message: '+r.text)
+                        print('Rapid message url2 response: '+r.text)
                     except requests.exceptions.RequestException as e:
                         msgEnd = "Rapid message send url2 error: "+str(e)+"\n"
                         print(msgEnd)
@@ -473,13 +473,13 @@ with serial.Serial(serialp, baud) as pt:
                     try:
                         r = requests.post(url2, data=payload)
                         # auth=('userid', 'password'), if you need it
-                        print(datetimeStr + ' - Heartbeat message: '+r.text)
+                        print(datetimeStr + ' - Heartbeat message url2: '+r.text)
                     except requests.exceptions.RequestException as e:
                         msgEnd = str(e)+"\n"
-                        print("Heartbeat message send error: "+msgEnd)
+                        print("Heartbeat message url2 send error: "+msgEnd)
                         with open(floc+'error.log', fmode) as errorf:
                             errorf.write(datetimeStr +
-                                         " - Heartbeat send error: "+msgEnd)
+                                         " - Heartbeat send url2 error: "+msgEnd)
                             errorf.flush()
                 if (hbInterval == 'H'):
                     hbTime = curr_hour
