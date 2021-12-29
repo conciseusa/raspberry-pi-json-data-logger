@@ -27,6 +27,7 @@ if sys.version_info.major != 3:
     sys.exit('Python3 required -> python3 serial_log.py')
 import json
 import os
+from pathlib import Path
 import subprocess
 import datetime
 import time
@@ -131,10 +132,11 @@ else:
     signal_labels = {}
 
 # set log/data file location
-if os.path.exists(os.getenv("HOME")+'/log'):
-    floc = os.getenv("HOME")+'/log/'  
+
+if os.path.exists(str(Path.home())+'/log'):
+    floc = str(Path.home())+'/log/'  
 else:
-    floc = os.getenv("HOME")+'/'
+    floc = str(Path.home())+'/'
 fmode = 'a'  # log file mode = append
 
 if stationId != '{SerialNumber}':  # send startup message if sId known, if not known, need to wait for data
@@ -180,10 +182,9 @@ with serial.Serial(serialp, baud) as pt:
     spb._CHUNK_SIZE = 1
     serial_line = spb.readline()  # read one line of text from serial port
     # throw away first line; might start mid-sentence (incomplete)
+    print('1st line serial data ignored.')
     if debugMsg:
         print('1st line serial data: ', serial_line)
-    else:
-        print('1st line serial data ignored.')
     print('', flush=True)  # blank line to make easier to read
     rmPrevData = None # rapid messages - load from rmTrigger, compare with current to sse change
     check_date = None
@@ -331,7 +332,7 @@ with serial.Serial(serialp, baud) as pt:
                             errorf.write(datetimeStr+" - "+msgEnd)
                             errorf.flush()
 
-        if parsed_json[rmTrigger] != rmPrevData:  # if signal changed
+        if rmTrigger and parsed_json[rmTrigger] != rmPrevData:  # if signal changed
             if rmPrevData is not None: # skip until rmPrevData set
                 remote_watch[str(parsed_json['Time'])] = parsed_json[rmTrigger]
                 with open(floc+curr_date+'-serial-summary.log', fmode) as outf:
@@ -349,11 +350,14 @@ with serial.Serial(serialp, baud) as pt:
             if (check_date is not None):  # if None, will be set below for next cycle
 
                 # check if disk if filling up
-                proc = subprocess.Popen(["df", "-h"], stdout=subprocess.PIPE)
-                output, error = proc.communicate()
-                dfMsg = str(output.strip().decode('ascii'))
-                summaryLog = floc+check_date+'-serial-summary.log'
+                if os.name == 'nt':
+                    dfMsg = 'No disk fill check on Windows'
+                else:
+                    proc = subprocess.Popen(["df", "-h"], stdout=subprocess.PIPE)
+                    output, error = proc.communicate()
+                    dfMsg = str(output.strip().decode('ascii'))
 
+                summaryLog = floc+check_date+'-serial-summary.log'
                 with open(summaryLog, fmode) as outf:
                     # high/low track same signals, so loop on high to get both
                     for key, high_value in high_values.items():
