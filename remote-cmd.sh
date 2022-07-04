@@ -1,8 +1,9 @@
 #!/bin/bash
 # a simple script that can phone home to retrieve information or trigger a command run
 # tested on a Raspberry Pi 2022, other platforms, other versions of RPi OS may require fixes running in a crontab
+# add cron job running as root to enable reboot feature: sudo crontab -e  /  @daily - Run once a day, "0 0 * * *" / @hourly  0 * * * *
 # @daily /home/pi/Work/git/raspberry-pi-json-data-logger/remote-cmd.sh
-# to add cron job running as root: sudo crontab -e  /  @daily - Run once a day, "0 0 * * *" / @hourly  0 * * * *
+# set the url where the command file can be controlled, see remote-cmd-config.sh or CMDF below
 
 DATE=`date +%Y-%m-%d:%H:%M:%S`
 SCRIPT_DIR=$(dirname $(readlink -f "$BASH_SOURCE"))
