@@ -10,9 +10,11 @@ Install git if that is needed on your distro.
 
 serial_log.ini is used to configure settings such as what remote server to push data to. It is recommended to move up to the parent directory of the checkout and create a directory `config`, copy in serial_log.ini, and configure your settings there. This way a `git pull` will not interact with the ini changes you have made. First ../config will be searched for the serial_log.ini file, then the current dir will be searched. From the checkout dir, `mkdir ../config; cp serial_log.ini ../config/serial_log.ini;` will create the dir and copy the ini file.
 
-Add to crontab so at restart: wait for network to come up and auto restart serial_log.py. See auto-restart.sh
+Add auto-restart.sh to crontab so at reboot: wait for network to come up and auto restart serial_log.py on errors. See auto-restart.sh
 
 Before adding the auto start code to crontab, it can be useful to run `python3 serial_log.py` in the terminal where you can see error messages. Once everything is working end-to-end, then add the auto start code to crontab.
+
+Add remote-cmd.sh to crontab so diffcult to reach units can be reboot using a file on a web server. See remote-cmd.sh
 
 To show current crontab: `crontab -l`  to edit crontab: `crontab -e`
 
