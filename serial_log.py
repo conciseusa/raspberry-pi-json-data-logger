@@ -6,18 +6,17 @@
 # Fix: sudo chmod 666 /dev/ttyS0   after every boot
 # can also try(better if works):
 # sudo adduser <username> dialout # logout / login to have this take effect
+# Additional serial port info in Raspberry-Pi-serial-port-cheatsheet.txt
 
-# ImportError: No module named serial
-# sudo apt-get install python3-serial
+# See serial_log.ini for settings that can be made without changing code
 
+# To start and see errors:
 # python3 serial_log.py
-# to auto restart:
-# while true;
-#  do python3 serial_log.py; echo "serial_log was killed, restarting it";
-#  test $? -gt 128 && break; done
-# Ctrl-z should exit loop
-# @reboot - use to auto start
+# to auto restart use auto-restart.sh, read comments in auto-restart.sh
+# Create dir /home/pi/log/ if not aready done. Dirs used on Raspberry Pi, adj as needed.
 
+# If ImportError: No module named serial
+# sudo apt-get install python3-serial
 
 from __future__ import print_function
 import serial
