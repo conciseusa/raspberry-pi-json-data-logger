@@ -13,7 +13,7 @@
 # To start and see errors:
 # python3 serial_log.py
 # to auto restart use auto-restart.sh, read comments in auto-restart.sh
-# Create dir /home/pi/log/ if not aready done. Dirs used on Raspberry Pi, adj as needed.
+# Create dir /home/pi/log/ if not aready done or logs will go in home dir. Dirs used on Raspberry Pi, adj as needed.
 
 # If ImportError: No module named serial
 # sudo apt-get install python3-serial

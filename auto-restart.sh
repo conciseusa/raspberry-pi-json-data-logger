@@ -3,7 +3,7 @@
 # Add to crontab so at restart (@reboot /home/pi/Work/git/raspberry-pi-json-data-logger/auto-restart.sh):
 # wait for network to come up and auto restart serial_log.py on error (checkout in /home/pi/Work/git/):
 # Create dir /home/pi/log/ if not aready done. Dirs used on Raspberry Pi, adj as needed.
-# Ctrl-z should exit loop, update serial_log.py to use with other scripts
+# Ctrl-z should exit loop (may take a number of trys), update serial_log.py to use with other scripts
 
 DATE=`date +%Y-%m-%d:%H:%M:%S`
 # sometimes @reboot will start before the network is online, so wait until network is up
