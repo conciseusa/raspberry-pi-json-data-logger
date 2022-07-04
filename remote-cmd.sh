@@ -1,9 +1,8 @@
 #!/bin/bash
 # a simple script that can phone home to retrieve information or trigger a command run
-# to add cron job:
-# sudo crontab -e  /  @daily - Run once a day, "0 0 * * *" / @hourly  0 * * * *
-# Raspberry Pi
+# tested on a Raspberry Pi 2022, other platforms, other versions of RPi OS may require fixes running in a crontab
 # @daily /home/pi/Work/git/raspberry-pi-json-data-logger/remote-cmd.sh
+# to add cron job running as root: sudo crontab -e  /  @daily - Run once a day, "0 0 * * *" / @hourly  0 * * * *
 
 DATE=`date +%Y-%m-%d:%H:%M:%S`
 SCRIPT_DIR=$(dirname $(readlink -f "$BASH_SOURCE"))
@@ -17,20 +16,32 @@ SCRIPT_DIR=$(dirname $(readlink -f "$BASH_SOURCE"))
 # source below has worked in testing, but may need to hardcode path in some situations
 source $SCRIPT_DIR/../config/remote-cmd-config.sh
 echo "$DATE - CMDF = $CMDF"
-echo "$DATE - $SCRIPT_DIR - $0" >> /tmp/remote-data.log # for troubleshooting in cron jobs
-echo "$DATE - CMDF = $CMDF" >> /tmp/remote-data.log
+echo "$DATE - $SCRIPT_DIR - $0" >> /tmp/remote-cmd.log # for troubleshooting in cron jobs
+echo "$DATE - CMDF = $CMDF" >> /tmp/remote-cmd.log
 
-# to remote trigger a reset, cmd file = {"reset":"T", "data":"Test Data"}
-# example/testing hosted file with reset True - https://conciseusa.github.io/remote-cmd-resetT.json
-reset=`curl -s $CMDF | python -c 'import json,sys;obj=json.load(sys.stdin);print obj["'reset'"]'`;
-echo "$DATE - reset = $reset"
-if [ $reset = "T" ]; then
-   echo "$DATE - reboot"
+# to remote trigger a git pull, cmd file = {"reboot":"F", "pull":"T", "data":"Test Data"}
+# pull before reboot so updated code will run on reboot
+pull=`curl -s $CMDF | python -c 'import json,sys;obj=json.load(sys.stdin);print obj["'pull'"]'`;
+echo "$DATE - pull = $pull"
+if [ $pull = "T" ]; then
+   echo "$DATE - pull" >> /tmp/remote-cmd.log
+   git -C $SCRIPT_DIR pull >> /tmp/remote-cmd.log
+fi
+
+# to remote trigger a reboot, cmd file = {"reboot":"T", "pull":"F", "data":"Test Data"}
+# example/testing hosted file with reboot True - https://conciseusa.github.io/remote-cmd-rebootT.json
+reboot=`curl -s $CMDF | python -c 'import json,sys;obj=json.load(sys.stdin);print obj["'reboot'"]'`;
+echo "$DATE - reboot = $reboot"
+if [ $reboot = "T" ]; then
+   echo "$DATE - reboot" >> /tmp/remote-cmd.log
    /sbin/reboot
 fi
 
-# to set a file from remote source, cmd file = {"reset":"T", "data":"Test Data"}
-# example/testing hosted file with reset False - https://conciseusa.github.io/remote-cmd-resetF.json
-data=`curl -s $CMDF | python -c 'import json,sys;obj=json.load(sys.stdin);print obj["'data'"]'`;
-echo "$DATE - data = $data"
-echo "$data" > /tmp/remote-data.txt
+# to set a file from remote source, cmd file = {"reboot":"F", "pull":"F", "data":"Test Data"}
+# example/testing hosted file with reboot False - https://conciseusa.github.io/remote-cmd-rebootF.json
+if [ 0 = 1 ]; then # disable until needed
+   data=`curl -s $CMDF | python -c 'import json,sys;obj=json.load(sys.stdin);print obj["'data'"]'`;
+   echo "$DATE - data = $data"
+   echo "$DATE - data = $data" >> /tmp/remote-cmd.log
+   echo "$data" > /tmp/remote-cmd.txt
+fi
