@@ -24,6 +24,6 @@ Bonus: Enable ll command:
 cd ~  
 nano .bashrc  
 Scroll half way down, where you'll see:  
-alias ll='ls -l'  # uncomment to enable, need to reopen terminal  
+alias ll='ls -l'  # uncomment to enable, ctrl-o, ctrl-x to save, need to reopen terminal  
 
 [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/conciseusa/raspberry-pi-json-data-logger)
