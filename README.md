@@ -21,9 +21,9 @@ To show current crontab: `crontab -l`  to edit crontab: `crontab -e`
 In theory, all you need is Python, a serial port to receive the data, and a network port to push the data to the target server. Often the biggest challenge is getting connected to the serial port.
 
 Bonus: Enable ll command:
-cd ~
-nano .bashrc
-Scroll half way down, where you'll see:
-alias ll='ls -l'  # uncomment to enable, need to reopen terminal
+cd ~  
+nano .bashrc  
+Scroll half way down, where you'll see:  
+alias ll='ls -l'  # uncomment to enable, need to reopen terminal  
 
 [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/conciseusa/raspberry-pi-json-data-logger)
