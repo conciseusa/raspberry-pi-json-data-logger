@@ -15,8 +15,10 @@
 # to auto restart use auto-restart.sh, read comments in auto-restart.sh
 # Create dir /home/pi/log/ if not aready done or logs will go in home dir. Dirs used on Raspberry Pi, adj as needed.
 
-# If ImportError: No module named serial
+# If ImportError: No module named serial on Ubuntu
 # sudo apt-get install python3-serial
+# If ModuleNotFoundError: No module named 'requests' on Ubuntu
+# sudo apt-get install python3-requests
 
 from __future__ import print_function
 import serial
@@ -216,7 +218,8 @@ with serial.Serial(serialp, baud) as pt:
             print('', flush=True)  # blank line to make easier to read
             with open(floc+'error.log', fmode) as errorf:
                 errorf.write(datetimeStr +
-                             " - Bad JSON. Skipping. "+str(e)+"\n")
+                             " - Bad JSON. Skipping. "+str(e)+"\n"+
+                             serial_line+"\n")
                 errorf.flush()
             continue
 
