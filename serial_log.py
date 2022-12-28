@@ -13,7 +13,7 @@
 # To start and see errors:
 # python3 serial_log.py
 # to auto restart use auto-restart.sh, read comments in auto-restart.sh
-# Create dir /home/pi/log/ if not aready done or logs will go in home dir. Dirs used on Raspberry Pi, adj as needed.
+# Create dir /home/*username*/log/ if not aready done or logs will go in home dir.
 
 # If ImportError: No module named serial on Ubuntu
 # sudo apt-get install python3-serial
@@ -34,14 +34,11 @@ import datetime
 import time
 # from pprint import pprint
 import requests
-# if not built in, try: sudo apt-get install python-pip ; pip install requests
-# or on the RPi: pip install requests
-# https://www.raspberrypi.org/documentation/linux/software/python.md
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser  # ver. < 3.0
-
+from configparser import ConfigParser
+#try: # old Py 2 code
+#    from configparser import ConfigParser
+#except ImportError:
+#    from ConfigParser import ConfigParser  # ver. < 3.0
 
 config = ConfigParser()
 try:  # first look in shared config dir, then look in same dir as this file
@@ -214,7 +211,7 @@ with serial.Serial(serialp, baud) as pt:
         try:
             parsed_json = json.loads(serial_line)
         except Exception as e:  # catch *all* exceptions in Py3
-            print('Bad JSON. Skipping. ', str(e))
+            print('Bad JSON. Skipping. Raw data in error.log', str(e))
             print('', flush=True)  # blank line to make easier to read
             with open(floc+'error.log', fmode) as errorf:
                 errorf.write(datetimeStr +

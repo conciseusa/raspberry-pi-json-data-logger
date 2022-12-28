@@ -5,15 +5,17 @@ sudo raspi-config
 Once raspi-config started, choose Interfacing options, then Serial.
 Answer No to the part asking if you want to activate a shell via the serial connection,
 then Yes to the part asking if you want to activate the hardware port.
-Validate, do Finish, then say yes to the question asking if you want to reboot the Raspberry Pi.
 If you want to use SSH or VNC, you can enable them also.
+Validate, do Finish, then say yes to the question asking if you want to reboot the Raspberry Pi.
 
-models 3 and later, use uart for serial not bluetooth
+models 3 and later, use uart for serial not bluetooth (RaspPiOS 9/2022 32 bit this was not needed)
 echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
 sudo systemctl disable hciuart
 sudo reboot
 
 Test loop back with minicom. Connect a 1K resistor from TXD / RXD, can use a wire, but can cause damage if wrong pins connected.
+Some interfaces need flow control added CTRL-A Z O 'Serial port setup' 'F - Hardware Flow Control'
+
 sudo apt update -y
 sudo apt install minicom -y
 
