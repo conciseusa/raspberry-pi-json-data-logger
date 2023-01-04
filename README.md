@@ -17,9 +17,9 @@ Add auto-restart.sh to crontab so at reboot: wait for network to come up and aut
 
 Before adding the auto start code to crontab, it can be useful to run `python3 serial_log.py` in the terminal where you can see error messages. Once everything is working end-to-end, then add the auto start code to crontab.
 
-Add remote-cmd.sh to crontab so diffcult to reach units can be reboot using a file on a web server. See remote-cmd.sh
+For Linux devices without a GUI, setup.sh can be run to do the above setup steps. Read comments in setup.sh
 
-To show current crontab: `crontab -l`  to edit crontab: `crontab -e`
+If needed, add remote-cmd.sh to root/sudo crontab so diffcult to reach units can be reboot using a file on a web server. See remote-cmd.sh
 
 In theory, all you need is Python, a serial port to receive the data, and a network port to push the data to the target server. Often the biggest challenge is getting connected to the serial port.
 
