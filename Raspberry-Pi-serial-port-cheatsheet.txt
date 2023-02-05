@@ -19,7 +19,7 @@ Some interfaces need flow control added CTRL-A Z O 'Serial port setup' 'F - Hard
 sudo apt update -y
 sudo apt install minicom -y
 
-sudo minicom -D /dev/serial0 -b 9600
+sudo minicom -w -D /dev/serial0 -b 9600
 A Minicom terminal starts up, if you type a letter, it should appear on the screen!
 Baud rate set to 9600 so the terminal can be used like the Serial Monitor function in the Arduino IDE.
 Some Arduino models do not use the serial port at D0, D1 to connect to the IDE,
