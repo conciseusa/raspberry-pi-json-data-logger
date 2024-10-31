@@ -16,8 +16,8 @@ echo "clone raspberry-pi-json-data-logger"
 git clone https://github.com/conciseusa/raspberry-pi-json-data-logger.git
 
 # copy default ini file to config dir so updates will not conflict with upstream changes
-# review config/serial_log.ini and make any needed changes
 # backup file if already present
+# review config/serial_log.ini and make any needed changes
 [ -f config/serial_log.ini ] && mv config/serial_log.ini config/serial_log_$(date +%T).ini
 cp raspberry-pi-json-data-logger/serial_log.ini config/serial_log.ini
 
